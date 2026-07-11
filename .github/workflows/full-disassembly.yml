@@ -1,0 +1,359 @@
+name: Full Binary Disassembly
+
+on:
+  workflow_dispatch:
+
+jobs:
+  disassemble:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install radare2
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq radare2 python3-pip
+          r2 -v
+          pip3 install pefile capstone
+          
+      - name: Download Ghidra
+        run: |
+          GHIDRA_URL="https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.2_build/ghidra_12.1.2_PUBLIC_20260605.zip"
+          echo "Downloading Ghidra..."
+          curl -L -o ghidra.zip "$GHIDRA_URL" --progress-bar
+          echo "Extracting Ghidra..."
+          unzip -q ghidra.zip -d /opt
+          GHIDRA_DIR=$(ls -d /opt/ghidra_* | head -1)
+          echo "GHIDRA_DIR=$GHIDRA_DIR" >> $GITHUB_ENV
+          echo "Ghidra installed to: $GHIDRA_DIR"
+
+      - name: Run Ghidra analysis on all binaries
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          chmod +x "$GHIDRA_ANALYZE"
+          
+          mkdir -p ghidra_projects analysis
+          
+          for BIN in core.dll skia.dll dinput8.dll crashpad_handler.exe; do
+            if [ -f "binaries/$BIN" ]; then
+              NAME="${BIN%.*}"
+              echo "=== Analyzing $BIN ==="
+              "$GHIDRA_ANALYZE" ghidra_projects "WD2_${NAME}" \
+                -import "binaries/$BIN" \
+                -processor "x86:LE:64:default" \
+                -cspec "windows" \
+                -analysisTimeoutPerFile 600 || echo "WARN: Ghidra analysis had issues for $BIN"
+              echo "=== Done: $BIN ==="
+            fi
+          done
+          
+          echo "=== Ghidra projects ==="
+          ls -la ghidra_projects/
+
+      - name: Full radare2 disassembly
+        run: |
+          mkdir -p analysis
+          
+          for BIN in core.dll skia.dll dinput8.dll crashpad_handler.exe; do
+            if [ -f "binaries/$BIN" ]; then
+              NAME="${BIN%.*}"
+              echo "=== radare2: $BIN ==="
+              
+              # Analyze binary
+              r2 -q -A -c "
+                echo === INFO ===;
+                iI;
+                echo === EXPORTS ===;
+                ie;
+                echo === IMPORTS ===;
+                ii;
+                echo === SYMBOLS ===;
+                is;
+                echo === FUNCTIONS ===;
+                afl;
+                echo === STRINGS ===;
+                iz;
+                echo === RELOCATIONS ===;
+                ir;
+              " "binaries/$BIN" > "analysis/${NAME}_radare2_basic.txt" 2>/dev/null || true
+              
+              echo "=== Basic info done: $BIN ==="
+              
+              # Full function list with signatures
+              r2 -q -A -c "
+                aflj
+              " "binaries/$BIN" > "analysis/${NAME}_functions.json" 2>/dev/null || true
+              
+              echo "=== Function list done: $BIN ==="
+              
+              # Disassemble each function (first 200 functions)
+              r2 -q -A -c "
+                afij
+              " "binaries/$BIN" > "analysis/${NAME}_func_info.json" 2>/dev/null || true
+              
+              echo "=== Function info done: $BIN ==="
+              
+              # Cross-references
+              r2 -q -A -c "
+                axtj
+              " "binaries/$BIN" > "analysis/${NAME}_xrefs.json" 2>/dev/null || true
+              
+              echo "=== Xrefs done: $BIN ==="
+            fi
+          done
+          
+          echo "=== All radare2 analysis done ==="
+          ls -la analysis/
+
+      - name: Disassemble key functions (detailed)
+        run: |
+          mkdir -p analysis/detailed
+          
+          for BIN in core.dll dinput8.dll; do
+            if [ -f "binaries/$BIN" ]; then
+              NAME="${BIN%.*}"
+              echo "=== Detailed disassembly: $BIN ==="
+              
+              # Get function names and disassemble each
+              r2 -q -A -c "
+                aflj
+              " "binaries/$BIN" > "analysis/detailed/${NAME}_all_funcs.json" 2>/dev/null || true
+              
+              # Disassemble ALL functions with full instructions
+              r2 -q -A -c "
+                afllj
+              " "binaries/$BIN" > "analysis/detailed/${NAME}_func_list.json" 2>/dev/null || true
+              
+              # String cross-references (which functions reference which strings)
+              r2 -q -A -c "
+                izj
+              " "binaries/$BIN" > "analysis/detailed/${NAME}_strings.json" 2>/dev/null || true
+              
+              # Imports with ordinals
+              r2 -q -A -c "
+                iij
+              " "binaries/$BIN" > "analysis/detailed/${NAME}_imports.json" 2>/dev/null || true
+              
+              # Exports with ordinals
+              r2 -q -A -c "
+                iej
+              " "binaries/$BIN" > "analysis/detailed/${NAME}_exports.json" 2>/dev/null || true
+              
+              # Relocations
+              r2 -q -A -c "
+                irj
+              " "binaries/$BIN" > "analysis/detailed/${NAME}_relocs.json" 2>/dev/null || true
+              
+              echo "=== Done: $BIN ==="
+            fi
+          done
+
+      - name: Python deep analysis
+        run: |
+          python3 << 'PYEOF'
+          import json, os, csv
+          
+          binaries = ["core.dll", "skia.dll", "dinput8.dll", "crashpad_handler.exe"]
+          
+          for BIN in binaries:
+              name = BIN.replace(".", "_")
+              print(f"\n=== Python analysis: {BIN} ===")
+              
+              # Parse r2 function list
+              func_file = f"analysis/{name}_functions.json"
+              if os.path.exists(func_file):
+                  try:
+                      with open(func_file) as f:
+                          funcs = json.load(f)
+                      
+                      with open(f"analysis/{name}_functions_detailed.csv", "w", newline="") as f:
+                          w = csv.writer(f)
+                          w.writerow(["Offset", "Name", "Size", "NbOps", "Type", "CallCount", "Edges"])
+                          for fn in funcs:
+                              w.writerow([
+                                  hex(fn.get("offset", 0)),
+                                  fn.get("name", "unknown"),
+                                  fn.get("size", 0),
+                                  fn.get("nbops", 0),
+                                  fn.get("type", ""),
+                                  fn.get("call", 0),
+                                  fn.get("bbsum", 0)
+                              ])
+                      
+                      print(f"  Functions: {len(funcs)}")
+                  except Exception as e:
+                      print(f"  Error parsing functions: {e}")
+              
+              # Parse imports
+              import_file = f"analysis/detailed/{name}_imports.json"
+              if os.path.exists(import_file):
+                  try:
+                      with open(import_file) as f:
+                          imports = json.load(f)
+                      
+                      with open(f"analysis/{name}_imports_full.csv", "w", newline="") as f:
+                          w = csv.writer(f)
+                          w.writerow(["Ordinal", "PLT", "Name", "Module"])
+                          for imp in imports:
+                              w.writerow([
+                                  imp.get("ordinal", ""),
+                                  hex(imp.get("plt", 0)),
+                                  imp.get("name", ""),
+                                  imp.get("libname", "")
+                              ])
+                      
+                      print(f"  Imports: {len(imports)}")
+                  except Exception as e:
+                      print(f"  Error parsing imports: {e}")
+              
+              # Parse exports
+              export_file = f"analysis/detailed/{name}_exports.json"
+              if os.path.exists(export_file):
+                  try:
+                      with open(export_file) as f:
+                          exports = json.load(f)
+                      
+                      with open(f"analysis/{name}_exports_full.csv", "w", newline="") as f:
+                          w = csv.writer(f)
+                          w.writerow(["Ordinal", "Address", "Name", "Bind", "Type"])
+                          for exp in exports:
+                              w.writerow([
+                                  exp.get("ordinal", ""),
+                                  hex(exp.get("paddr", 0)),
+                                  exp.get("name", ""),
+                                  exp.get("bind", ""),
+                                  exp.get("type", "")
+                              ])
+                      
+                      print(f"  Exports: {len(exports)}")
+                  except Exception as e:
+                      print(f"  Error parsing exports: {e}")
+              
+              # Parse relocations
+              reloc_file = f"analysis/detailed/{name}_relocs.json"
+              if os.path.exists(reloc_file):
+                  try:
+                      with open(reloc_file) as f:
+                          relocs = json.load(f)
+                      
+                      with open(f"analysis/{name}_relocs_full.csv", "w", newline="") as f:
+                          w = csv.writer(f)
+                          w.writerow(["Offset", "Type", "Name", "Module"])
+                          for r in relocs:
+                              w.writerow([
+                                  hex(r.get("vaddr", 0)),
+                                  r.get("type", ""),
+                                  r.get("name", ""),
+                                  r.get("libname", "")
+                              ])
+                      
+                      print(f"  Relocations: {len(relocs)}")
+                  except Exception as e:
+                      print(f"  Error parsing relocs: {e}")
+              
+              # Parse strings
+              str_file = f"analysis/detailed/{name}_strings.json"
+              if os.path.exists(str_file):
+                  try:
+                      with open(str_file) as f:
+                          strings = json.load(f)
+                      
+                      with open(f"analysis/{name}_strings_full.csv", "w", newline="") as f:
+                          w = csv.writer(f)
+                          w.writerow(["Offset", "Type", "Size", "String"])
+                          for s in strings:
+                              w.writerow([
+                                  hex(s.get("vaddr", 0)),
+                                  s.get("type", ""),
+                                  s.get("size", 0),
+                                  s.get("string", "")
+                              ])
+                      
+                      print(f"  Strings: {len(strings)}")
+                  except Exception as e:
+                      print(f"  Error parsing strings: {e}")
+          
+          print("\n=== Python analysis complete ===")
+          PYEOF
+
+      - name: Create function disassembly dumps
+        run: |
+          mkdir -p analysis/disasm
+          
+          # Disassemble core.dll functions (key ones)
+          for BIN in core.dll dinput8.dll; do
+            if [ -f "binaries/$BIN" ]; then
+              NAME="${BIN%.*}"
+              echo "=== Disassembling $BIN functions ==="
+              
+              # Get all function offsets and disassemble
+              r2 -q -A -c "
+                aflq | python3 -c \"
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    for fn in data:
+        addr = fn.get('offset', 0)
+        name = fn.get('name', f'fcn_{addr:x}')
+        print(f'{addr} {name}')
+except:
+    pass
+\" | head -500 | while read addr name; do
+                echo \"--- $name @ $addr ---\" >> analysis/disasm/${NAME}_disasm.txt
+                r2 -q -c \"s $addr; af; pdf\" \"binaries/$BIN\" >> analysis/disasm/${NAME}_disasm.txt 2>/dev/null || true
+              done
+              
+              echo "=== Done: $BIN ==="
+            fi
+          done
+
+      - name: Collect outputs
+        run: |
+          echo "=== Analysis outputs ==="
+          find analysis/ -type f | sort
+          echo "=== Total size ==="
+          du -sh analysis/
+
+      - name: Upload disassembly results
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-disassembly-results
+          path: |
+            analysis/
+            ghidra_projects/
+          retention-days: 30
+
+      - name: Print summary
+        run: |
+          echo "=== DISASSEMBLY SUMMARY ==="
+          for BIN in core.dll skia.dll dinput8.dll crashpad_handler.exe; do
+            NAME="${BIN%.*}"
+            echo ""
+            echo "--- $BIN ---"
+            if [ -f "analysis/${NAME}_functions_detailed.csv" ]; then
+              echo "  Functions: $(tail -n +2 analysis/${NAME}_functions_detailed.csv | wc -l)"
+            fi
+            if [ -f "analysis/${NAME}_imports_full.csv" ]; then
+              echo "  Imports: $(tail -n +2 analysis/${NAME}_imports_full.csv | wc -l)"
+            fi
+            if [ -f "analysis/${NAME}_exports_full.csv" ]; then
+              echo "  Exports: $(tail -n +2 analysis/${NAME}_exports_full.csv | wc -l)"
+            fi
+            if [ -f "analysis/${NAME}_strings_full.csv" ]; then
+              echo "  Strings: $(tail -n +2 analysis/${NAME}_strings_full.csv | wc -l)"
+            fi
+            if [ -f "analysis/${NAME}_relocs_full.csv" ]; then
+              echo "  Relocations: $(tail -n +2 analysis/${NAME}_relocs_full.csv | wc -l)"
+            fi
+          done
+          echo ""
+          echo "=== ALL DONE ==="
