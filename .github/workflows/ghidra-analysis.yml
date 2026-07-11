@@ -32,64 +32,135 @@ jobs:
           echo "Ghidra installed to: $GHIDRA_DIR"
           echo "GHIDRA_DIR=$GHIDRA_DIR" >> $GITHUB_ENV
 
-      - name: Analyze core.dll with Ghidra
+      - name: Run Ghidra analysis
         run: |
           export JAVA_HOME="$JAVA_HOME_21_X64"
           GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          chmod +x "$GHIDRA_ANALYZE"
           
           mkdir -p analysis_project
           
-          echo "=== Analyzing core.dll (may take several minutes) ==="
+          echo "=== Analyzing core.dll ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -import binaries/core.dll \
             -processor "x86:LE:64:default" \
             -cspec "windows" \
             -analysisTimeoutPerFile 300
           
-          echo "=== Analysis complete ==="
+          echo "=== Ghidra analysis complete ==="
           ls -la analysis_project/
 
-      - name: Export function list
+      - name: Extract data from binary with native tools
         run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64"
-          GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          echo "=== Extracting imports/exports with readelf and objdump ==="
           
-          echo "=== Exporting functions ==="
-          "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
-            -readOnly \
-            -enablePyGhidra \
-            -postScript ExportFunctions.py \
-            -scriptPath scripts
-
-      - name: Export strings
-        run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64"
-          GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          # Since core.dll is PE, use pe-tools or strings
+          pip install pefile 2>/dev/null || true
           
-          echo "=== Exporting strings ==="
-          "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
-            -readOnly \
-            -enablePyGhidra \
-            -postScript ExportStrings.py \
-            -scriptPath scripts
-
-      - name: Export imports/exports
-        run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64"
-          GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          python3 << 'PYEOF'
+          import pefile
+          import csv
+          import os
           
-          echo "=== Exporting imports/exports ==="
-          "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
-            -readOnly \
-            -enablePyGhidra \
-            -postScript ExportImportsExports.py \
-            -scriptPath scripts
+          pe = pefile.PE("binaries/core.dll")
+          name = "core.dll"
+          
+          # Export imports
+          print("[*] Extracting imports...")
+          with open(name + "_imports.csv", "w") as f:
+              f.write("Library,Function,Address\n")
+              if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
+                  for entry in pe.DIRECTORY_ENTRY_IMPORT:
+                      lib = entry.dll.decode('utf-8', errors='replace') if entry.dll else "unknown"
+                      for imp in entry.imports:
+                          if imp.name:
+                              fname = imp.name.decode('utf-8', errors='replace')
+                              f.write(f'"{lib}","{fname}","{hex(imp.address)}"\n')
+          
+          # Export exports
+          print("[*] Extracting exports...")
+          with open(name + "_exports.csv", "w") as f:
+              f.write("Ordinal,Address,Name\n")
+              if hasattr(pe, 'DIRECTORY_ENTRY_EXPORT'):
+                  for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
+                      if exp.name:
+                          fname = exp.name.decode('utf-8', errors='replace')
+                          f.write(f'{exp.ordinal},"{hex(exp.address)}","{fname}"\n')
+          
+          print("[+] PE imports/exports extracted")
+          PYEOF
 
-      - name: Collect outputs
+      - name: Extract strings with native tools
         run: |
-          echo "=== Collecting analysis outputs ==="
-          find . -name "*.csv" -o -name "*.txt" | head -30
-          echo "=== Done ==="
+          echo "=== Extracting strings ==="
+          
+          # All printable strings (4+ chars)
+          strings -a -n 4 binaries/core.dll > core.dll_all_strings.txt
+          echo "Total strings: $(wc -l < core.dll_all_strings.txt)"
+          
+          # Lua-related strings
+          grep -iE "lua|script|hook|native|register|vehicle|player|entity|felony|noclip|teleport|notify|progression|domino|engine|repair|force|reward|cash|mission|phone|camera|hack|ingredient|perk|reputation|postfx|traffic|alarm|chase|police|fbi|minhook|crashpad|sentry|dinput|skia|render" core.dll_all_strings.txt > core.dll_lua_strings.txt || true
+          echo "Lua-related strings: $(wc -l < core.dll_lua_strings.txt)"
+          
+          # Wide strings too
+          strings -a -n 4 -el binaries/core.dll > core.dll_wide_strings.txt || true
+          echo "Wide strings: $(wc -l < core.dll_wide_strings.txt)"
+
+      - name: Analyze exports with nm-like extraction
+        run: |
+          echo "=== Extracting function patterns ==="
+          
+          python3 << 'PYEOF'
+          import re
+          import csv
+          
+          # Read all strings
+          strings = []
+          with open("core.dll_all_strings.txt", "r", errors="replace") as f:
+              strings = [line.strip() for line in f if line.strip()]
+          
+          # Find Lua C API function names (lua_*, luaL_*)
+          lua_api = [s for s in strings if re.match(r'^(lua_|luaL_|luaopen_)', s)]
+          
+          # Find game API function names (CamelCase patterns)
+          game_api = [s for s in strings if re.match(r'^[A-Z][a-zA-Z]+(Get|Set|Enable|Disable|Create|Destroy|Spawn|Force|Add|Remove|Start|Stop|Play|Send|Show|Hide|Update|Execute|Register|Teleport|Repair|Follow|Unfollow|Request|Release|Lock|Unlock|Open|Close|Init|Shutdown|Reset|Clear|Fill|Load|Save|Find|Search|Query|Check|Verify|Test|Handle|Process|Run|Launch|Exit|Begin|End|Move|Rotate|Scale|Attach|Detach|Mount|Unmount)$', s)]
+          
+          # Find function-like patterns
+          func_patterns = [s for s in strings if re.match(r'^[A-Z][a-zA-Z]+[A-Z][a-zA-Z]+$', s) and len(s) > 5 and len(s) < 60]
+          
+          # Write Lua API
+          with open("core.dll_lua_api.csv", "w", newline="") as f:
+              w = csv.writer(f)
+              w.writerow(["Function"])
+              for fn in sorted(set(lua_api)):
+                  w.writerow([fn])
+          
+          # Write all function-like strings
+          with open("core.dll_function_patterns.csv", "w", newline="") as f:
+              w = csv.writer(f)
+              w.writerow(["Pattern"])
+              for fn in sorted(set(func_patterns)):
+                  w.writerow([fn])
+          
+          print(f"[+] Lua API functions found: {len(set(lua_api))}")
+          print(f"[+] Game function patterns found: {len(set(func_patterns))}")
+          
+          # Print some examples
+          for fn in sorted(set(lua_api))[:20]:
+              print(f"  Lua: {fn}")
+          print("  ...")
+          for fn in sorted(set(func_patterns))[:20]:
+              print(f"  Game: {fn}")
+          print("  ...")
+          PYEOF
+
+      - name: Collect all outputs
+        run: |
+          echo "=== Collecting outputs ==="
+          echo "Generated files:"
+          find . -maxdepth 2 \( -name "*.csv" -o -name "*.txt" \) -not -path "./scripthook-lua/*" | while read f; do
+            echo "  - $(basename $f) ($(wc -c < $f) bytes)"
+          done
 
       - name: Upload analysis results
         uses: actions/upload-artifact@v4
@@ -98,13 +169,13 @@ jobs:
           path: |
             analysis_project/
             *.csv
-            *.txt
+            core.dll_*.txt
           retention-days: 30
 
       - name: Print summary
         run: |
           echo "=== Analysis Summary ==="
           echo "Files generated:"
-          find . -name "*.csv" -o -name "*.txt" | while read f; do
+          find . -maxdepth 2 \( -name "*.csv" -o -name "*.txt" \) -not -path "./scripthook-lua/*" | while read f; do
             echo "  - $(basename $f) ($(wc -c < $f) bytes)"
           done
