@@ -15,11 +15,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Download Ghidra
         run: |
@@ -34,8 +34,8 @@ jobs:
 
       - name: Analyze core.dll with Ghidra
         run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
           GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
-          chmod +x "$GHIDRA_ANALYZE"
           
           mkdir -p analysis_project
           
@@ -44,44 +44,43 @@ jobs:
             -import binaries/core.dll \
             -processor "x86:LE:64:default" \
             -cspec "windows" \
-            -analysisTimeoutPerFile 300 \
-            -deleteProject false
+            -analysisTimeoutPerFile 300
           
           echo "=== Analysis complete ==="
           ls -la analysis_project/
 
       - name: Export function list
         run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
           GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
           
           echo "=== Exporting functions ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
             -postScript ExportFunctions.java \
-            -scriptPath scripts \
-            -deleteProject false
+            -scriptPath scripts
 
       - name: Export strings
         run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
           GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
           
           echo "=== Exporting strings ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
             -postScript ExportStrings.java \
-            -scriptPath scripts \
-            -deleteProject false
+            -scriptPath scripts
 
       - name: Export imports/exports
         run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
           GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
           
           echo "=== Exporting imports/exports ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
             -postScript ExportImportsExports.java \
-            -scriptPath scripts \
-            -deleteProject false
+            -scriptPath scripts
 
       - name: Collect outputs
         run: |
