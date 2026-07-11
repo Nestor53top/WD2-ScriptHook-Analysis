@@ -2,6 +2,9 @@ name: Full Binary Disassembly
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'binaries/**'
 
 jobs:
   disassemble:
