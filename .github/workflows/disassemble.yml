@@ -1,0 +1,269 @@
+name: Disassemble All Binaries
+
+on: workflow_dispatch
+
+jobs:
+  disassemble:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq radare2 python3-pip
+          r2 -v
+          pip3 install pefile capstone
+          
+      - name: Download Ghidra
+        run: |
+          curl -L -o ghidra.zip "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.2_build/ghidra_12.1.2_PUBLIC_20260605.zip" --progress-bar
+          unzip -q ghidra.zip -d /opt
+          echo "GHIDRA_DIR=$(ls -d /opt/ghidra_* | head -1)" >> $GITHUB_ENV
+
+      - name: Run Ghidra on all binaries
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          chmod +x "$GHIDRA_DIR/support/analyzeHeadless"
+          mkdir -p ghidra_projects
+          
+          for BIN in core.dll skia.dll dinput8.dll crashpad_handler.exe; do
+            [ -f "binaries/$BIN" ] || continue
+            NAME="${BIN%.*}"
+            echo "=== Ghidra: $BIN ==="
+            "$GHIDRA_DIR/support/analyzeHeadless" ghidra_projects "WD2_${NAME}" \
+              -import "binaries/$BIN" \
+              -processor "x86:LE:64:default" \
+              -cspec "windows" \
+              -analysisTimeoutPerFile 600 || echo "WARN: $BIN"
+          done
+
+      - name: radare2 deep disassembly
+        run: |
+          mkdir -p analysis
+          
+          for BIN in core.dll skia.dll dinput8.dll crashpad_handler.exe; do
+            [ -f "binaries/$BIN" ] || continue
+            NAME="${BIN%.*}"
+            echo "=== radare2: $BIN ==="
+            
+            r2 -q -A -c "iI" "binaries/$BIN" > "analysis/${NAME}_info.txt" 2>/dev/null || true
+            r2 -q -A -c "ie" "binaries/$BIN" > "analysis/${NAME}_exports.txt" 2>/dev/null || true
+            r2 -q -A -c "ii" "binaries/$BIN" > "analysis/${NAME}_imports.txt" 2>/dev/null || true
+            r2 -q -A -c "afl" "binaries/$BIN" > "analysis/${NAME}_functions.txt" 2>/dev/null || true
+            r2 -q -A -c "iz" "binaries/$BIN" > "analysis/${NAME}_strings.txt" 2>/dev/null || true
+            r2 -q -A -c "ir" "binaries/$BIN" > "analysis/${NAME}_relocs.txt" 2>/dev/null || true
+            r2 -q -A -c "axt" "binaries/$BIN" > "analysis/${NAME}_xrefs.txt" 2>/dev/null || true
+            
+            r2 -q -A -c "aflj" "binaries/$BIN" > "analysis/${NAME}_functions.json" 2>/dev/null || true
+            r2 -q -A -c "iij" "binaries/$BIN" > "analysis/${NAME}_imports.json" 2>/dev/null || true
+            r2 -q -A -c "iej" "binaries/$BIN" > "analysis/${NAME}_exports.json" 2>/dev/null || true
+            r2 -q -A -c "izj" "binaries/$BIN" > "analysis/${NAME}_strings.json" 2>/dev/null || true
+            r2 -q -A -c "irj" "binaries/$BIN" > "analysis/${NAME}_relocs.json" 2>/dev/null || true
+            r2 -q -A -c "axtj" "binaries/$BIN" > "analysis/${NAME}_xrefs.json" 2>/dev/null || true
+            
+            echo "  Done: $BIN"
+          done
+
+      - name: Disassemble all functions from core.dll
+        run: |
+          mkdir -p analysis/core_disasm
+          
+          echo "=== Extracting core.dll function offsets ==="
+          r2 -q -A -c "aflj" binaries/core.dll > /tmp/funcs.json 2>/dev/null || true
+          
+          python3 << 'PYEOF'
+          import json, subprocess, os
+          
+          with open("/tmp/funcs.json") as f:
+              funcs = json.load(f)
+          
+          print(f"Total functions in core.dll: {len(funcs)}")
+          
+          os.makedirs("analysis/core_disasm", exist_ok=True)
+          
+          batch_size = 50
+          for i in range(0, len(funcs), batch_size):
+              batch = funcs[i:i+batch_size]
+              r2_cmd = "aaa;"
+              for fn in batch:
+                  addr = fn.get("offset", 0)
+                  name = fn.get("name", f"fcn_{addr:x}")
+                  r2_cmd += f"s 0x{addr:x}; af; pdf;"
+              
+              outfile = f"analysis/core_disasm/batch_{i//batch_size}.txt"
+              try:
+                  result = subprocess.run(
+                      ["r2", "-q", "-A", "-c", r2_cmd, "binaries/core.dll"],
+                      capture_output=True, text=True, timeout=120
+                  )
+                  with open(outfile, "w") as f:
+                      f.write(result.stdout)
+              except:
+                  with open(outfile, "w") as f:
+                      f.write("# timeout or error\n")
+              
+              if (i // batch_size) % 5 == 0:
+                  print(f"  Disassembled {min(i+batch_size, len(funcs))}/{len(funcs)} functions...")
+          
+          print(f"Disassembly complete: {len(funcs)} functions")
+          PYEOF
+
+      - name: Disassemble all functions from dinput8.dll
+        run: |
+          mkdir -p analysis/dinput8_disasm
+          
+          r2 -q -A -c "aflj" binaries/dinput8.dll > /tmp/di_funcs.json 2>/dev/null || true
+          
+          python3 << 'PYEOF'
+          import json, subprocess, os
+          
+          with open("/tmp/di_funcs.json") as f:
+              funcs = json.load(f)
+          
+          print(f"Total functions in dinput8.dll: {len(funcs)}")
+          
+          os.makedirs("analysis/dinput8_disasm", exist_ok=True)
+          
+          for i, fn in enumerate(funcs):
+              addr = fn.get("offset", 0)
+              name = fn.get("name", f"fcn_{addr:x}")
+              
+              outfile = f"analysis/dinput8_disasm/{name}.asm"
+              try:
+                  result = subprocess.run(
+                      ["r2", "-q", "-A", "-c", f"s 0x{addr:x}; af; pdf", "binaries/dinput8.dll"],
+                      capture_output=True, text=True, timeout=30
+                  )
+                  with open(outfile, "w") as f:
+                      f.write(f"# {name} @ 0x{addr:x}\n")
+                      f.write(result.stdout)
+              except:
+                  pass
+          
+          print(f"Done: {len(funcs)} functions")
+          PYEOF
+
+      - name: Disassemble key functions from core.dll
+        run: |
+          mkdir -p analysis/core_key_disasm
+          
+          # Find functions by name patterns
+          python3 << 'PYEOF'
+          import json, subprocess, os
+          
+          with open("analysis/core_functions.json") as f:
+              funcs = json.load(f)
+          
+          # Key function patterns from our analysis
+          key_patterns = [
+              "Init", "PostInit", "PreInit", "DllMain",
+              "lua_", "luaL_", "luaopen_",
+              "OnPreInit", "OnPostInit", "OnLoad", "OnGameStateChange",
+              "OnRender", "OnUpdate", "OnUnload", "OnGameShutdown",
+              "Register", "Hook", "Hook",
+              "DirectInput",
+              "DetectGameVersion", "ProperShutdown",
+              "ScriptHook",
+          ]
+          
+          key_funcs = []
+          for fn in funcs:
+              name = fn.get("name", "")
+              for pat in key_patterns:
+                  if pat.lower() in name.lower():
+                      key_funcs.append(fn)
+                      break
+          
+          print(f"Key functions found: {len(key_funcs)}")
+          
+          os.makedirs("analysis/core_key_disasm", exist_ok=True)
+          
+          for fn in key_funcs:
+              addr = fn.get("offset", 0)
+              name = fn.get("name", f"fcn_{addr:x}")
+              safe_name = "".join(c if c.isalnum() or c in "_-" else "_" for c in name)
+              
+              try:
+                  result = subprocess.run(
+                      ["r2", "-q", "-A", "-c", f"s 0x{addr:x}; af; pdf", "binaries/core.dll"],
+                      capture_output=True, text=True, timeout=60
+                  )
+                  outfile = f"analysis/core_key_disasm/{safe_name}.asm"
+                  with open(outfile, "w") as f:
+                      f.write(f"# {name} @ 0x{addr:x}\n")
+                      f.write(f"# Size: {fn.get('size', 0)} bytes\n")
+                      f.write(result.stdout)
+              except:
+                  pass
+          
+          print(f"Key function disassembly complete")
+          PYEOF
+
+      - name: Python comprehensive analysis
+        run: |
+          python3 << 'PYEOF'
+          import json, os, csv
+          
+          binaries = ["core.dll", "skia.dll", "dinput8.dll", "crashpad_handler.exe"]
+          
+          for BIN in binaries:
+              name = BIN.replace(".", "_")
+              print(f"\n=== {BIN} ===")
+              
+              for suffix in ["functions", "imports", "exports", "strings", "relocs", "xrefs"]:
+                  json_file = f"analysis/{name}_{suffix}.json"
+                  csv_file = f"analysis/{name}_{suffix}.csv"
+                  if os.path.exists(json_file):
+                      try:
+                          with open(json_file) as f:
+                              data = json.load(f)
+                          if data and isinstance(data, list):
+                              with open(csv_file, "w", newline="") as f:
+                                  w = csv.writer(f)
+                                  if data:
+                                      w.writerow(list(data[0].keys()))
+                                      for row in data:
+                                          w.writerow(list(row.values()))
+                              print(f"  {suffix}: {len(data)} entries")
+                      except Exception as e:
+                          print(f"  {suffix}: error {e}")
+          
+          print("\n=== Done ===")
+          PYEOF
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-disassembly-results
+          path: |
+            analysis/
+            ghidra_projects/
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "=== DISASSEMBLY RESULTS ==="
+          echo ""
+          for BIN in core.dll skia.dll dinput8.dll crashpad_handler.exe; do
+            NAME="${BIN%.*}"
+            echo "--- $BIN ---"
+            [ -f "analysis/${NAME}_functions.txt" ] && echo "  Functions: $(wc -l < analysis/${NAME}_functions.txt)"
+            [ -f "analysis/${NAME}_imports.txt" ] && echo "  Imports: $(wc -l < analysis/${NAME}_imports.txt)"
+            [ -f "analysis/${NAME}_exports.txt" ] && echo "  Exports: $(wc -l < analysis/${NAME}_exports.txt)"
+            [ -f "analysis/${NAME}_strings.txt" ] && echo "  Strings: $(wc -l < analysis/${NAME}_strings.txt)"
+            [ -f "analysis/${NAME}_relocs.txt" ] && echo "  Relocs: $(wc -l < analysis/${NAME}_relocs.txt)"
+            [ -f "analysis/${NAME}_xrefs.txt" ] && echo "  Xrefs: $(wc -l < analysis/${NAME}_xrefs.txt)"
+            echo ""
+          done
+          echo "=== TOTAL ==="
+          du -sh analysis/
+          echo "=== DONE ==="
