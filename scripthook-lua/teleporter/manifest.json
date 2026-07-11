@@ -1,0 +1,10 @@
+{
+	"name": "Teleporter",
+	"author": "Nickwasused",
+	"version": "1.2.0",
+	
+	"entrypoint": "main.lua",
+	"keyBinds": {
+		"menu": "F5"
+	}
+}

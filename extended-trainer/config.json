@@ -1,0 +1,28 @@
+{
+    "core": {
+        "console": {
+            "key": "F1",
+            "lineLimit": 150
+        },
+        "crashDumpsEnabled": true,
+        "debugLogs": false,
+        "paths": {
+            "lua_main": "data/lua/main.lua",
+            "scripts": "data/scripts",
+            "versions": "data",
+            "vfs": "data/vfs"
+        },
+        "win32Console": false
+    },
+    "game": {
+        "disableDistrictChangeUINotification": false,
+        "disableWorldBoundaries": false,
+        "discordRichPresence": false,
+        "skipIntro": true
+    },
+    "scriptHook": {
+        "d3d11DebugFlag": false,
+        "enableAutoRefresh": false,
+        "showStartupMenu": false
+    }
+}

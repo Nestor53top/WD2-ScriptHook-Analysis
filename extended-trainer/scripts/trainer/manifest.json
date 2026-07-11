@@ -1,0 +1,10 @@
+{
+	"name": "Extended Trainer",
+	"author": "Nomad Group & HeySlickThatsMe",
+	"version": "1.3",
+	
+	"entrypoint": "main.lua",
+	"keyBinds": {
+		"menu": "F4"
+	}
+}
