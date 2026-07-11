@@ -57,6 +57,7 @@ jobs:
           echo "=== Exporting functions ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
+            -enablePyGhidra \
             -postScript ExportFunctions.py \
             -scriptPath scripts
 
@@ -68,6 +69,7 @@ jobs:
           echo "=== Exporting strings ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
+            -enablePyGhidra \
             -postScript ExportStrings.py \
             -scriptPath scripts
 
@@ -79,6 +81,7 @@ jobs:
           echo "=== Exporting imports/exports ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
+            -enablePyGhidra \
             -postScript ExportImportsExports.py \
             -scriptPath scripts
 
