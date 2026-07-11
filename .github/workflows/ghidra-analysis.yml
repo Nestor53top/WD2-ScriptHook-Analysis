@@ -57,7 +57,29 @@ jobs:
           echo "=== Exporting functions ==="
           "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
             -readOnly \
-            -postScript ExportFunctions.java \
+            -postScript ExportFunctions.py \
+            -scriptPath scripts
+
+      - name: Export strings
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          
+          echo "=== Exporting strings ==="
+          "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
+            -readOnly \
+            -postScript ExportStrings.py \
+            -scriptPath scripts
+
+      - name: Export imports/exports
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          GHIDRA_ANALYZE="$GHIDRA_DIR/support/analyzeHeadless"
+          
+          echo "=== Exporting imports/exports ==="
+          "$GHIDRA_ANALYZE" analysis_project WD2CoreAnalysis \
+            -readOnly \
+            -postScript ExportImportsExports.py \
             -scriptPath scripts
 
       - name: Export strings
