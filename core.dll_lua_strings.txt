@@ -1,0 +1,299 @@
+lua_mainH
+main.luaH
+OnRenderff
+OnRenderH
+`sentry_init` failed
+invoking `before_send` hook
+event was discarded by the `before_send` hook
+;.sentry-native
+SENTRY_DSN
+SENTRY_DEBUG
+Sentry sentry_key=
+, sentry_version=7, sentry_client=
+sentry.native/0.4.2
+/minidump/?sentry_key=
+sentry.native
+github:getsentry/sentry-native
+crashpad
+native
+[sentry] 
+x-sentry-auth
+application/x-sentry-envelope
+flushing session and queue before crashpad handler
+handing control over to crashpad
+crashpad_handler.exe
+unable to start crashpad backend, invalid handler_path
+starting crashpad backend with handler "%S"
+__sentry-event
+__sentry-breadcrumb1
+__sentry-breadcrumb2
+started crashpad client handler
+failed to start crashpad client handler
+C:\Projekte\Trash\sentry-native\external\crashpad\client\crash_report_database_win.cc
+__cdecl crashpad::`anonymous-namespace'::Metadata::~Metadata(void)
+class std::unique_ptr<class crashpad::`anonymous namespace'::Metadata,struct std::default_delete<class crashpad::`anonymous namespace'::Metadata> > __cdecl crashpad::`anonymous-namespace'::Metadata::Create(const class base::FilePath &,const class base::FilePath &)
+void __cdecl crashpad::`anonymous-namespace'::Metadata::Read(void)
+void __cdecl crashpad::`anonymous-namespace'::Metadata::Write(void)
+bool __cdecl crashpad::`anonymous-namespace'::EnsureDirectory(const class base::FilePath &)
+bool __cdecl crashpad::`anonymous-namespace'::CreateDirectoryIfNecessary(const class base::FilePath &)
+void __cdecl crashpad::CrashReportDatabase::UploadReport::InitializeAttachments(void)
+enum crashpad::CrashReportDatabase::OperationStatus __cdecl crashpad::CrashReportDatabaseWin::DeleteReport(const struct crashpad::UUID &)
+void __cdecl crashpad::CrashReportDatabaseWin::CleanOrphanedAttachments(void)
+C:\Projekte\Trash\sentry-native\external\crashpad\client\crashpad_client_win.cc
+long __cdecl crashpad::`anonymous-namespace'::UnhandledExceptionHandler(struct _EXCEPTION_POINTERS *)
+\\.\pipe\crashpad_%lu_
+void __cdecl crashpad::`anonymous-namespace'::CreatePipe(class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > *,class base::ScopedGeneric<void *,struct crashpad::internal::ScopedFileHANDLECloseTraits> *)
+bool __cdecl crashpad::`anonymous-namespace'::StartHandlerProcess(class std::unique_ptr<struct crashpad::`anonymous namespace'::BackgroundHandlerStartThreadData,struct std::default_delete<struct crashpad::`anonymous namespace'::BackgroundHandlerStartThreadData> >)
+bool __cdecl crashpad::CrashpadClient::StartHandler(const class base::FilePath &,const class base::FilePath &,const class base::FilePath &,const class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &,const class std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::less<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > > &,const class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > &,bool,bool,const class std::vector<class base::FilePath,class std::allocator<class base::FilePath> > &)
+void __cdecl crashpad::CrashpadClient::DumpAndCrash(struct _EXCEPTION_POINTERS *)
+C:\Projekte\Trash\sentry-native\external\crashpad\client\settings.cc
+bool __cdecl crashpad::Settings::ReadSettings(void *,struct crashpad::Settings::Data *,bool)
+bool __cdecl crashpad::Settings::RecoverSettings(void *,struct crashpad::Settings::Data *)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\win\scoped_handle.cc
+void __cdecl crashpad::internal::ScopedKernelHANDLECloseTraits::Free(void *)
+void __cdecl crashpad::internal::ScopedSearchHANDLECloseTraits::Free(void *)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\file\file_io.cc
+__int64 __cdecl crashpad::`anonymous-namespace'::FileIOReadExactly::Read(void *,unsigned __int64,bool)
+bool __cdecl crashpad::internal::ReadExactlyInternal::ReadExactly(void *,unsigned __int64,bool)
+bool __cdecl crashpad::LoggingWriteFile(void *,const void *,unsigned __int64)
+void __cdecl crashpad::CheckedCloseFile(void *)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\file\file_io_win.cc
+__int64 __cdecl crashpad::internal::NativeWriteFile(void *,const void *,unsigned __int64)
+__int64 __cdecl crashpad::ReadFile(void *,void *,unsigned __int64)
+void *__cdecl crashpad::LoggingOpenFileForRead(const class base::FilePath &)
+void *__cdecl crashpad::LoggingOpenFileForWrite(const class base::FilePath &,enum crashpad::FileWriteMode,enum crashpad::FilePermissions)
+void *__cdecl crashpad::LoggingOpenFileForReadAndWrite(const class base::FilePath &,enum crashpad::FileWriteMode,enum crashpad::FilePermissions)
+bool __cdecl crashpad::LoggingLockFile(void *,enum crashpad::FileLocking)
+bool __cdecl crashpad::LoggingUnlockFile(void *)
+__int64 __cdecl crashpad::LoggingSeekFile(void *,__int64,int)
+bool __cdecl crashpad::LoggingTruncateFile(void *)
+bool __cdecl crashpad::LoggingCloseFile(void *)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\file\file_reader.cc
+__int64 __cdecl crashpad::WeakFileHandleFileReader::Read(void *,unsigned __int64)
+bool __cdecl crashpad::FileReader::Open(const class base::FilePath &)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\file\file_writer.cc
+bool __cdecl crashpad::WeakFileHandleFileWriter::WriteIoVec(class std::vector<struct crashpad::WritableIoVec,class std::allocator<struct crashpad::WritableIoVec> > *)
+bool __cdecl crashpad::FileWriter::Open(const class base::FilePath &,enum crashpad::FileWriteMode,enum crashpad::FilePermissions)
+void __cdecl crashpad::FileWriter::Close(void)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\file\directory_reader_win.cc
+bool __cdecl crashpad::DirectoryReader::Open(const class base::FilePath &)
+enum crashpad::DirectoryReader::Result __cdecl crashpad::DirectoryReader::NextFile(class base::FilePath *)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\file\filesystem_win.cc
+bool __cdecl crashpad::`anonymous-namespace'::IsSymbolicLink(const class base::FilePath &)
+bool __cdecl crashpad::`anonymous-namespace'::LoggingRemoveDirectoryImpl(const class base::FilePath &)
+bool __cdecl crashpad::FileModificationTime(const class base::FilePath &,struct timespec *)
+bool __cdecl crashpad::IsRegularFile(const class base::FilePath &)
+bool __cdecl crashpad::IsDirectory(const class base::FilePath &,bool)
+bool __cdecl crashpad::LoggingRemoveFile(const class base::FilePath &)
+bool __cdecl crashpad::LoggingRemoveDirectory(const class base::FilePath &)
+C:\Projekte\Trash\sentry-native\external\crashpad\util\win\critical_section_with_debug_info.cc
+bool __cdecl crashpad::`anonymous-namespace'::CrashpadInitializeCriticalSectionEx(struct _RTL_CRITICAL_SECTION *,unsigned long,unsigned long)
+ConvertStringSecurityDescriptorToSecurityDescriptor
+C:\Projekte\Trash\sentry-native\external\crashpad\util\win\registration_protocol_win.cc
+void *__cdecl crashpad::`anonymous-namespace'::GetSecurityDescriptorWithUser(const wchar_t *,unsigned __int64 *)
+BuildSecurityDescriptor
+bool __cdecl crashpad::SendToCrashHandlerServer(const class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > &,const struct crashpad::ClientToServerMessage &,union crashpad::ServerToClientMessage *)
+const void *__cdecl crashpad::GetSecurityDescriptorForNamedPipeInstance(unsigned __int64 *)
+C:\Projekte\Trash\sentry-native\external\crashpad\third_party\mini_chromium\mini_chromium\base\rand_util.cc
+C:\Projekte\Trash\sentry-native\external\crashpad\util\win\scoped_local_alloc.cc
+void __cdecl crashpad::internal::LocalAllocTraits::Free(void *)
+Failed to initialize minhook
+Init_MinHook
+PreInit_DInput
+ScriptHook/ScriptHook.log
+Watch_Dogs 2 ScriptHook
+Failed to startup Watch_Dogs 2 ScriptHook. Game will exit now.
+AutoRefresh: Reloading script {}
+AutoRefresh: Reloading script {} once the game unpauses
+AutoRefresh: Refreshing core Lua
+Texture2D colorMap : register(t0);SamplerState colorSampler : register(s0);struct VS_Input{	float2 pos : POSITION;	float2 texCoord : TEXCOORD;};struct PS_Input{	float4 pos : SV_POSITION;	float2 texCoord : TEXCOORD;};PS_Input VS(VS_Input input){	PS_Input output;	output.pos = float4(input.pos.x, input.pos.y, 0.0f, 1.0f);	output.texCoord = input.texCoord;	return output;}float4 PS(PS_Input input) : SV_TARGET{	return colorMap.Sample(colorSampler, input.texCoord);}
+Texture2D texture0 : register(t0);SamplerState colorSampler : register(s0);struct VS_Input{	float2 pos : POSITION;	float2 texCoord : TEXCOORD;};struct PS_Input{	float4 pos : SV_POSITION;	float2 texCoord : TEXCOORD;};PS_Input VS(VS_Input input){	PS_Input output;	output.pos = float4(input.pos.x, input.pos.y, 0.0f, 1.0f);	output.texCoord = input.texCoord;	return output;}float4 PS(PS_Input input) : SV_TARGET{	return texture0.Sample(colorSampler, input.texCoord);}
+cbuffer ShaderConstant : register(b0){	float4 color : COLOR;};float4 VS(float2 pos : POSITION) : SV_POSITION{	return float4(pos.x, pos.y, 0.0f, 1.0f);}float4 PS() : SV_TARGET{	return color;}
+Config::_basePath (dinput8_launch = {}) = {}
+data/scripts
+data/lua/main.lua
+scripts
+lua_main
+scriptHook
+https://3b7daac6b6d14818bf6db667355bb5e4@o373283.ingest.sentry.io/5194108
+ScriptHook
+[ScriptHook] Created {}
+[ScriptHook] Failed to create {}
+[ScriptHook] Failed to load/parse config.json
+Watch Dogs 2 ScriptHook
+Your game version is not supported by ScriptHook! Please make sure you own a legal copy of Watch_Dogs 2 and have the latest Steam, Uplay or Uplay Plus version.
+[ScriptHook] Failed to detect game version!
+[ScriptHook] This game version is not supported!
+[ScriptHook] Game version: {}
+[ScriptHook] Failed to load internal data
+[ScriptHook] Shutting down
+[ScriptHook] Failed to initialize AutoRefreshManager!
+[ScriptHook] AutoRefresh disabled in config
+Loaded {} scripts
+[FACTION_UMENI] WATCH_DOGS 2 ScriptHook initialized. Press [COLOR_ONLINE_ENEMY]F1[CSS_END] for console, [COLOR_ONLINE_ENEMY]F4[CSS_END] for UI menu
+[ScriptHook::OnGameStateChange] Engine has transitioned to status {}
+[Script] Script "{}" does not exist (directory not found)
+[Script] Unable to parse config for script "{}": {}
+[Script] Unable to load manifest.json for script "{}"
+[Script] Entrypoint {} does not exist for script "{}"
+[Script] Keybind {}, unrecognized key {}
+Lua error
+[Script] Loaded {} (version: {})
+[Script] Unable to load {}: {}
+Script::InitCallbacks
+[Script] Unloaded {}
+Load a Script
+Reload a Script
+Reload all (currently loaded) scripts
+[Scripts] Failed to setup rendering for scripts
+Unload a Script
+HandleRenderResize
+Script "{}" is not loaded
+Unable to determine calling script
+Failed to register command, does it already exist?
+Callback to Lua function failed
+SetDescription
+RegisterCommand
+Keybind {}, callback to Lua function failed (Script: {})
+RegisterKeyHandler
+RenderHook: gfx::IFactory::Reset (ResetContext::DeviceLost) failed
+[RenderManager] Failed to initialize gfx Factory!
+RenderHook: gfx::IFactory::Reset (ResetContext::DeviceReset) failed
+[RenderManager] Resizing, new size: {} {}
+WD2 ScriptHook
+A new ScriptHook version ({}) is available! Click here to download.
+When you modify Lua files on the file system, the Script will be automatically reloaded.
+Lua Auto Refresh
+Execute a lua string
+lua_run
+Reload builtin ScriptHook Lua extensions
+lua_dumpstack
+lua_reload
+[Lua] 
+LUA PANIC
+Error loading ScriptHook Lua files: {}
+CScriptSystem initialized
+LuaManager::ExecuteString
+[LuaManager] Unrecognized metatable '{}'
+CameraReset
+CameraSetCustom
+Argument cannot be parsed as entity id
+EntityHasComponent
+GetEntityComponents
+Invalid entity id (does not exist)
+GetEntityClassName
+GetGlobalTrafficLightState
+SetGlobalTrafficLightState
+ToggleFelonySystem
+[SetEntityGraphicKitModel] {}
+PutPlayerInVehicle(GetLocalPlayerEntityId(), "{}")
+SetEntityGraphicKitModel
+SetLocalPlayerGraphicKitModel
+[GetPlayerPosition] {}
+Local player is at {} {} {}
+SetProgression
+PutPlayerInVehicleDelayed
+Teleport
+SpawnEntityFromArchetypeHash
+GetGraphicKitModelByEntityId
+GetArchetypeHashByEntityId
+GetPlayerPosition
+HasLocalPlayerFreeCamera
+SetLocalPlayerFreeCamera
+HasLocalPlayerNoclip
+SetLocalPlayerNoclip
+Script
+CVehicleFloatingPhysComponent
+CVehicleCarPhysComponent
+CVehicleWheeledPhysComponent
+CVehicleSailBoatPhysComponent
+CVehicleMotorCyclePhysComponent
+CVehicleHelicopterPhysComponent
+CRenderableComponent
+CVehicle
+CVehicleGenericPhysComponent
+EnableVehicleHighBeamLights
+SetVehicleLightBehaviorFlag
+SetVehicleLicensePlateText
+RepairVehicle
+EnableVehicleConvenienceLight
+EnableVehicleSpotLight
+EnableVehicleEmergencyLight
+EnableVehicleIndicator
+IsVehicleEngineEnabled
+EnableVehicleEngine
+IsVehicleSirenEnabled
+EnableVehicleSiren
+GetVehiclePartRotation
+GetVehiclePartPosition
+SetVehiclePartRotation
+SetVehiclePartPosition
+GetVehiclePartCount
+GetVehiclePartHash
+lua_UISimpleMenu_SetTitle
+Lua: UISimpleMenu::~UISimple()
+lua_UISimpleMenu__gc
+Lua: UISimpleMenu::__gc
+IsEntryEnabled
+Discord_RegisterUplayGame
+[CrashReporter] Unable to locate crashpad_handler.exe
+/crashpad_handler.exe
+/cache/sentry
+[WinWindowImpl] RegisterRawInputDevices failed
+[D3D11RenderContext] Failed to save state!
+[D3D11RenderContext] Failed to restore state!
+[BaseRenderer] Failed to initialize TextRenderingManager!
+[Renderer] Shutdown: Leaking resource {} (Type: {})
+BaseRendererImpl::UnregisterResource: Unknown resource {}
+UnregisterResource
+[Surface] Failed to map vertex buffer for texture rendering
+BaseSurfaceImpl: Failed to map vertex buffer for texture rendering
+?[BaseRenderContext] Dirty Rect drawing is not supported!
+RenderTarget
+cbuffer ConstBuffer : register(b0){	float4 color;}struct VsInput{	float2 Pos: POSITION;	float2 TexCoord: TEXCOORD;};struct VsOutput{	float4 Pos: SV_Position;	float2 TexCoord: TEXCOORD;	float4 Color: COLOR;};void MainVS(VsInput input, out VsOutput output){	output.Pos.xy = input.Pos;	output.Pos.z = 0.5;	output.Pos.w = 1.0;	output.TexCoord = input.TexCoord;	output.Color = color;}Texture2D texture0 : register(t1);SamplerState colorSampler : register(s0);void MainPS(VsOutput input, out float4 output: SV_Target){	output = input.Color * float4(1.0, 1.0, 1.0, texture0.Sample(colorSampler, input.TexCoord).a);}
+[TextRenderer] Failed to create Constant Buffer!
+[TextRenderer] Failed to create Shader Sampler!
+[TextRenderer] Failed to create Pipeline state!
+[TextRenderer] Failed to create Root Signature!
+[TextRenderer] Failed to compile Vertex Shader!
+[TextRenderer] Failed to create InputLayout for Vertex Shader!
+[TextRenderer] Unable to setup Buffer (size = {})
+[CommandSystem] Command {} already registered!
+OnlineHooks
+invalid vector subscript
+PushBackMember_Hook
+BinkOpen_Hook
+RenderManagerFinishCommandlist
+Failed to initialize Renderer!
+GdiFactory: Failed to initialize backbuffer render target!
+[ui::DefaultViewport] Failed to initialize render target
+GdiRenderTarget: Destroying skSurface {}
+GdiRenderTarget: Destroying skCanvas {}
+GdiRenderTarget: Unsupported Texture format!
+Cannot deserialize an unregistered enum (hash = {})
+D:\a\Watch_Dogs-2-ScriptHook\Watch_Dogs-2-ScriptHook\NomadFX\bin\Win64\Shipping\projects\wd2sh\core.pdb
+PreInit_DInput
+skia.dll
+RegisterClassExW
+UnregisterClassW
+RegisterRawInputDevices
+BuildSecurityDescriptorW
+ConvertStringSecurityDescriptorToSecurityDescriptorW
+_register_onexit_function
+.?AVCrashReportDatabase@crashpad@@
+.?AVCrashReportDatabaseWin@crashpad@@
+.?AVReadExactlyInternal@internal@crashpad@@
+.?AVWriteAllInternal@internal@crashpad@@
+.?AVFileIOReadExactly@?A0xf8b229dd@crashpad@@
+.?AVFileIOWriteAll@?A0xf8b229dd@crashpad@@
+.?AVFileSeekerInterface@crashpad@@
+.?AVFileReaderInterface@crashpad@@
+.?AVWeakFileHandleFileReader@crashpad@@
+.?AVFileReader@crashpad@@
+.?AVFileWriterInterface@crashpad@@
+.?AVWeakFileHandleFileWriter@crashpad@@
+.?AVFileWriter@crashpad@@
+.?AVUploadReport@CrashReportDatabase@crashpad@@
+.?AUReport@CrashReportDatabase@crashpad@@
+.?AV?$_Binder@U_Unforced@std@@AEAV<lambda_6e1d170edff28fedd1eec32d2ad8e8a7>@@$$V@std@@
+.?AV?$_Binder@U_Unforced@std@@AEAV<lambda_3aa7c1a52dc8b8f7693372b19a54ee79>@@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@std@@
