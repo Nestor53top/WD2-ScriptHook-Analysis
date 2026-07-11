@@ -1,0 +1,107 @@
+name: Ghidra Analysis
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'binaries/**'
+      - 'scripts/**'
+
+jobs:
+  analyze:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Download Ghidra
+        shell: pwsh
+        run: |
+          $ghidraUrl = "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.0.1_build/ghidra_11.0.1_PUBLIC_20231222.zip"
+          Write-Host "Downloading Ghidra..."
+          Invoke-WebRequest -Uri $ghidraUrl -OutFile "ghidra.zip" -UseBasicParsing
+          Write-Host "Extracting Ghidra..."
+          Expand-Archive -Path "ghidra.zip" -DestinationPath "C:\" -Force
+          $ghidraDir = Get-ChildItem "C:\ghidra_*" -Directory | Select-Object -First 1
+          Write-Host "Ghidra installed to: $($ghidraDir.FullName)"
+          echo "GHIDRA_DIR=$($ghidraDir.FullName)" >> $env:GITHUB_ENV
+
+      - name: Create Ghidra project and analyze
+        shell: pwsh
+        run: |
+          $ghidraAnalyze = "$env:GHIDRA_DIR\support\analyzeHeadless.bat"
+          
+          # Create project directory
+          New-Item -ItemType Directory -Path "analysis_project" -Force
+          
+          Write-Host "=== Analyzing core.dll ==="
+          & $ghidraAnalyze "analysis_project" "WD2CoreAnalysis" `
+            -import "binaries\core.dll" `
+            -processor "x86:LE:64:default" `
+            -cspec "windows" `
+            -analysisTimeoutPerFile 300 `
+            -deleteProject false
+          
+          Write-Host "=== Analysis complete ==="
+
+      - name: Export function list
+        shell: pwsh
+        run: |
+          $ghidraAnalyze = "$env:GHIDRA_DIR\support\analyzeHeadless.bat"
+          
+          Write-Host "=== Exporting functions ==="
+          & $ghidraAnalyze "analysis_project" "WD2CoreAnalysis" `
+            -readOnly `
+            -postScript ExportFunctions.java `
+            -scriptPath "scripts" `
+            -deleteProject false
+
+      - name: Export strings
+        shell: pwsh
+        run: |
+          $ghidraAnalyze = "$env:GHIDRA_DIR\support\analyzeHeadless.bat"
+          
+          Write-Host "=== Exporting strings ==="
+          & $ghidraAnalyze "analysis_project" "WD2CoreAnalysis" `
+            -readOnly `
+            -postScript ExportStrings.java `
+            -scriptPath "scripts" `
+            -deleteProject false
+
+      - name: Export imports/exports
+        shell: pwsh
+        run: |
+          $ghidraAnalyze = "$env:GHIDRA_DIR\support\analyzeHeadless.bat"
+          
+          Write-Host "=== Exporting imports/exports ==="
+          & $ghidraAnalyze "analysis_project" "WD2CoreAnalysis" `
+            -readOnly `
+            -postScript ExportImportsExports.java `
+            -scriptPath "scripts" `
+            -deleteProject false
+
+      - name: Upload analysis results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghidra-analysis-core-dll
+          path: |
+            analysis_project/
+            *.csv
+            *.txt
+          retention-days: 30
+
+      - name: Print summary
+        shell: pwsh
+        run: |
+          Write-Host "=== Analysis Summary ==="
+          Write-Host "Files generated:"
+          Get-ChildItem -Path "." -Recurse -Include "*.csv","*.txt" | ForEach-Object {
+            Write-Host "  - $($_.Name) ($($_.Length) bytes)"
+          }
